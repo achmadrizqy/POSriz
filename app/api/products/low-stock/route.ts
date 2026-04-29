@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const products = await prisma.product.findMany({
-      orderBy: { stock: 'asc' }
-    });
-
-    // Filter produk yang stoknya <= minStock
-    // Menggunakan cast opsional as any untuk properti minStock jika TS belum terupdate
-    const lowStockProducts = products.filter((p: any) => p.stock <= (p.minStock ?? 5));
+    // Query langsung ke DB: ambil produk yang stock <= minStock
+    const lowStockProducts = await prisma.$queryRaw`
+      SELECT id, code, name, stock, "minStock", price
+      FROM "Product"
+      WHERE stock <= "minStock"
+      ORDER BY stock ASC
+    `;
 
     return NextResponse.json(lowStockProducts);
   } catch (error) {
-    return NextResponse.json({ error: 'Gagal mengambil data produk dengan stok kritis' }, { status: 500 });
+    console.error("Low stock error:", error);
+    return NextResponse.json({ error: 'Gagal mengambil data stok kritis' }, { status: 500 });
   }
 }
