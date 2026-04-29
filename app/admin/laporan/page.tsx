@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Calendar, FileText, Printer } from "lucide-react";
+import { Calendar, FileText, Printer, Trophy } from "lucide-react";
 
 type Transaction = {
   id: string;
@@ -12,11 +12,18 @@ type Transaction = {
   items: { id: string; name: string; qty: number; price: number; subtotal: number }[];
 };
 
+type BestSeller = { name: string; totalQty: number; totalRevenue: number };
+
 export default function LaporanPage() {
+  const [activeTab, setActiveTab] = useState<"riwayat" | "bestseller">("riwayat");
+
+  // Filter state (shared)
   const [startDate, setStartDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [paymentMethod, setPaymentMethod] = useState<string>("Semua");
   const [sortOrder, setSortOrder] = useState<string>("desc");
+
+  // Riwayat state
   const [data, setData] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -24,6 +31,10 @@ export default function LaporanPage() {
   const [totalPendapatan, setTotalPendapatan] = useState(0);
   const [totalTransaksi, setTotalTransaksi] = useState(0);
   const [printingId, setPrintingId] = useState<string | null>(null);
+
+  // Best seller state
+  const [bestSellers, setBestSellers] = useState<BestSeller[]>([]);
+  const [isLoadingBS, setIsLoadingBS] = useState(false);
 
   const handlePrintReceipt = async (tx: Transaction) => {
     setPrintingId(tx.id);
@@ -41,7 +52,7 @@ export default function LaporanPage() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchRiwayat = async () => {
     setIsLoading(true);
     try {
       let url = `/api/transactions?page=${page}&limit=10&sort=${sortOrder}&paymentMethod=${paymentMethod}`;
@@ -59,7 +70,22 @@ export default function LaporanPage() {
     finally { setIsLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [startDate, endDate, paymentMethod, sortOrder, page]);
+  const fetchBestSeller = async () => {
+    setIsLoadingBS(true);
+    try {
+      let url = `/api/transactions/best-seller?limit=10`;
+      if (startDate && endDate) url += `&startDate=${startDate}&endDate=${endDate}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (!json.error) setBestSellers(json);
+    } catch (e) { console.error(e); }
+    finally { setIsLoadingBS(false); }
+  };
+
+  useEffect(() => {
+    fetchRiwayat();
+    fetchBestSeller();
+  }, [startDate, endDate, paymentMethod, sortOrder, page]);
 
   const paymentBadgeColor: Record<string, string> = {
     TUNAI: "bg-green-100 text-green-700",
@@ -131,88 +157,149 @@ export default function LaporanPage() {
         </div>
       </div>
 
-      {/* Tabel Riwayat */}
+      {/* Tab */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800">Riwayat Penjualan</h2>
+        <div className="flex border-b border-slate-100">
+          <button
+            onClick={() => setActiveTab("riwayat")}
+            className={`flex-1 py-4 text-lg font-bold transition-colors flex items-center justify-center gap-2 ${
+              activeTab === "riwayat"
+                ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }`}>
+            <FileText className="w-5 h-5" /> Riwayat Penjualan
+          </button>
+          <button
+            onClick={() => setActiveTab("bestseller")}
+            className={`flex-1 py-4 text-lg font-bold transition-colors flex items-center justify-center gap-2 ${
+              activeTab === "bestseller"
+                ? "text-amber-600 border-b-2 border-amber-500 bg-amber-50/50"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }`}>
+            <Trophy className="w-5 h-5" /> Produk Terlaris
+          </button>
         </div>
 
-        {isLoading ? (
-          <div className="p-12 text-center text-xl text-slate-400">Memuat data...</div>
-        ) : (
-          <div className="overflow-x-auto min-h-[360px]">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b-2 border-slate-100 text-base text-slate-500 bg-slate-50">
-                  <th className="px-5 py-3 font-semibold">Waktu</th>
-                  <th className="px-5 py-3 font-semibold">No. Nota</th>
-                  <th className="px-5 py-3 font-semibold">Rincian Barang</th>
-                  <th className="px-5 py-3 font-semibold text-right">Diskon</th>
-                  <th className="px-5 py-3 font-semibold text-right">Grand Total</th>
-                  <th className="px-5 py-3 font-semibold text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.length === 0 ? (
-                  <tr><td colSpan={6} className="p-10 text-center text-xl text-slate-400">Tidak ada transaksi ditemukan.</td></tr>
-                ) : data.map(tx => (
-                  <tr key={tx.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-4 text-base font-medium text-slate-600 whitespace-nowrap">
-                      {new Date(tx.createdAt).toLocaleString("id-ID", {
-                        day: "2-digit", month: "short", year: "numeric",
-                        hour: "2-digit", minute: "2-digit"
-                      })}
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-slate-700 text-lg">#{tx.id.slice(-6).toUpperCase()}</p>
-                      <span className={`inline-block mt-1 text-sm font-bold px-2.5 py-1 rounded-lg ${paymentBadgeColor[tx.paymentMethod] || "bg-slate-100 text-slate-600"}`}>
-                        {tx.paymentMethod || "TUNAI"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <ul className="space-y-1">
-                        {tx.items.map(item => (
-                          <li key={item.id} className="text-base text-slate-700">
-                            <span className="font-bold">{item.qty}×</span> {item.name}
-                            <span className="text-slate-400 ml-1">(@Rp{item.price.toLocaleString("id-ID")})</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td className="px-5 py-4 text-right text-red-500 font-semibold text-lg">
-                      {tx.discount > 0 ? `-Rp ${tx.discount.toLocaleString("id-ID")}` : "–"}
-                    </td>
-                    <td className="px-5 py-4 text-right font-black text-2xl text-green-700">
-                      Rp {tx.grandTotal.toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <button
-                        onClick={() => handlePrintReceipt(tx)}
-                        disabled={printingId === tx.id}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50 text-base"
-                      >
-                        <Printer className="w-5 h-5" />
-                        {printingId === tx.id ? "Mencetak..." : "Cetak"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* Tab: Riwayat */}
+        {activeTab === "riwayat" && (
+          <>
+            {isLoading ? (
+              <div className="p-12 text-center text-xl text-slate-400">Memuat data...</div>
+            ) : (
+              <div className="overflow-x-auto min-h-[360px]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-slate-100 text-base text-slate-500 bg-slate-50">
+                      <th className="px-5 py-3 font-semibold">Waktu</th>
+                      <th className="px-5 py-3 font-semibold">No. Nota</th>
+                      <th className="px-5 py-3 font-semibold">Rincian Barang</th>
+                      <th className="px-5 py-3 font-semibold text-right">Diskon</th>
+                      <th className="px-5 py-3 font-semibold text-right">Grand Total</th>
+                      <th className="px-5 py-3 font-semibold text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.length === 0 ? (
+                      <tr><td colSpan={6} className="p-10 text-center text-xl text-slate-400">Tidak ada transaksi ditemukan.</td></tr>
+                    ) : data.map(tx => (
+                      <tr key={tx.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-4 text-base font-medium text-slate-600 whitespace-nowrap">
+                          {new Date(tx.createdAt).toLocaleString("id-ID", {
+                            day: "2-digit", month: "short", year: "numeric",
+                            hour: "2-digit", minute: "2-digit"
+                          })}
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-bold text-slate-700 text-lg">#{tx.id.slice(-6).toUpperCase()}</p>
+                          <span className={`inline-block mt-1 text-sm font-bold px-2.5 py-1 rounded-lg ${paymentBadgeColor[tx.paymentMethod] || "bg-slate-100 text-slate-600"}`}>
+                            {tx.paymentMethod || "TUNAI"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <ul className="space-y-1">
+                            {tx.items.map(item => (
+                              <li key={item.id} className="text-base text-slate-700">
+                                <span className="font-bold">{item.qty}×</span> {item.name}
+                                <span className="text-slate-400 ml-1">(@Rp{item.price.toLocaleString("id-ID")})</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="px-5 py-4 text-right text-red-500 font-semibold text-lg">
+                          {tx.discount > 0 ? `-Rp ${tx.discount.toLocaleString("id-ID")}` : "–"}
+                        </td>
+                        <td className="px-5 py-4 text-right font-black text-2xl text-green-700">
+                          Rp {tx.grandTotal.toLocaleString("id-ID")}
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <button onClick={() => handlePrintReceipt(tx)} disabled={printingId === tx.id}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors disabled:opacity-50 text-base">
+                            <Printer className="w-5 h-5" />
+                            {printingId === tx.id ? "Mencetak..." : "Cetak"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                <button disabled={page <= 1} onClick={() => setPage(page - 1)}
+                  className="px-6 py-3 bg-white border-2 border-slate-200 rounded-xl text-lg font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  ← Sebelumnya
+                </button>
+                <span className="text-lg font-bold text-slate-600">Halaman {page} / {totalPages}</span>
+                <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}
+                  className="px-6 py-3 bg-white border-2 border-slate-200 rounded-xl text-lg font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  Selanjutnya →
+                </button>
+              </div>
+            )}
+          </>
         )}
 
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-            <button disabled={page <= 1} onClick={() => setPage(page - 1)}
-              className="px-6 py-3 bg-white border-2 border-slate-200 rounded-xl text-lg font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-              ← Sebelumnya
-            </button>
-            <span className="text-lg font-bold text-slate-600">Halaman {page} / {totalPages}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}
-              className="px-6 py-3 bg-white border-2 border-slate-200 rounded-xl text-lg font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-              Selanjutnya →
-            </button>
+        {/* Tab: Best Seller */}
+        {activeTab === "bestseller" && (
+          <div className="overflow-x-auto min-h-[360px]">
+            {isLoadingBS ? (
+              <div className="p-12 text-center text-xl text-slate-400">Memuat data...</div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-100 text-base text-slate-500 bg-slate-50">
+                    <th className="px-5 py-3 font-semibold text-center w-16">Rank</th>
+                    <th className="px-5 py-3 font-semibold">Nama Produk</th>
+                    <th className="px-5 py-3 font-semibold text-right">Total Terjual (Qty)</th>
+                    <th className="px-5 py-3 font-semibold text-right">Total Pendapatan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bestSellers.length === 0 ? (
+                    <tr><td colSpan={4} className="p-10 text-center text-xl text-slate-400">Belum ada data penjualan.</td></tr>
+                  ) : bestSellers.map((item, idx) => (
+                    <tr key={item.name} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="px-5 py-4 text-center">
+                        {idx === 0 && <span className="text-2xl">🥇</span>}
+                        {idx === 1 && <span className="text-2xl">🥈</span>}
+                        {idx === 2 && <span className="text-2xl">🥉</span>}
+                        {idx > 2 && <span className="text-lg font-bold text-slate-400">#{idx + 1}</span>}
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-lg text-slate-800">{item.name}</td>
+                      <td className="px-5 py-4 text-right">
+                        <span className="text-2xl font-black text-blue-600">{item.totalQty.toLocaleString("id-ID")}</span>
+                        <span className="text-slate-400 text-base ml-1">pcs</span>
+                      </td>
+                      <td className="px-5 py-4 text-right font-bold text-xl text-green-700">
+                        Rp {item.totalRevenue.toLocaleString("id-ID")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>

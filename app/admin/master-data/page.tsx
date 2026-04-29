@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, PackageSearch, Edit, X, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Trash2, Save, PackageSearch, Edit, X, Search, Download, Upload, CheckCircle } from "lucide-react";
 
 type ProductTierPrice = { id?: string; minQty: number; price: number };
 type Product = {
@@ -14,6 +14,11 @@ export default function MasterDataPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Import/Export state
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Add form
   const [code, setCode] = useState("");
@@ -96,6 +101,32 @@ export default function MasterDataPage() {
     } catch { alert("Gagal menghapus produk"); }
   };
 
+  // Export CSV
+  const handleExport = () => {
+    window.open("/api/products/export", "_blank");
+  };
+
+  // Import CSV
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    setImportResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/products/import", { method: "POST", body: formData });
+      const result = await res.json();
+      if (result.error) { alert(result.error); return; }
+      setImportResult(result);
+      fetchData();
+    } catch { alert("Gagal mengimpor file"); }
+    finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);
     setEditCode(product.code);
@@ -144,6 +175,51 @@ export default function MasterDataPage() {
 
   return (
     <div className="p-5 max-w-7xl mx-auto space-y-6">
+
+      {/* Import / Export */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 className="text-lg font-bold text-slate-700 mb-4">Import / Export Data Produk</h2>
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Export */}
+          <button onClick={handleExport}
+            className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-base transition-colors shadow-sm">
+            <Download className="w-5 h-5" /> Export CSV
+          </button>
+
+          {/* Import */}
+          <label className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-base transition-colors shadow-sm cursor-pointer ${
+            isImporting ? "bg-slate-300 text-slate-500" : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}>
+            <Upload className="w-5 h-5" />
+            {isImporting ? "Mengimpor..." : "Import CSV"}
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={isImporting} />
+          </label>
+
+          <p className="text-sm text-slate-400">
+            Format CSV: <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-600">kode;nama;stok;harga_modal;harga_jual;min_stok;harga_grosir</span>
+          </p>
+        </div>
+
+        {/* Hasil Import */}
+        {importResult && (
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+            <CheckCircle className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-green-800 text-base">
+                Import selesai: <span className="text-green-700">{importResult.imported} produk berhasil</span>
+                {importResult.skipped > 0 && <span className="text-slate-500">, {importResult.skipped} dilewati</span>}
+              </p>
+              {importResult.errors.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {importResult.errors.map((e, i) => (
+                    <li key={i} className="text-sm text-red-600">{e}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Form Tambah Produk */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
