@@ -116,7 +116,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="label" tick={{ fontSize: 13, fill: "#64748b" }} tickLine={false} axisLine={false} />
                 <YAxis tickFormatter={formatRp} tick={{ fontSize: 12, fill: "#94a3b8" }} tickLine={false} axisLine={false} width={70} />
                 <Tooltip
-                  formatter={(val: number) => [`Rp ${val.toLocaleString("id-ID")}`, "Pendapatan"]}
+                  formatter={(val: any) => [`Rp ${Number(val || 0).toLocaleString("id-ID")}`, "Pendapatan"]}
                   contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px" }}
                 />
                 <Line type="monotone" dataKey="pendapatan" stroke="#3b82f6" strokeWidth={3}
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="label" tick={{ fontSize: 13, fill: "#64748b" }} tickLine={false} axisLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
                 <Tooltip
-                  formatter={(val: number) => [val, "Transaksi"]}
+                  formatter={(val: any) => [val, "Transaksi"]}
                   contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px" }}
                 />
                 <Bar dataKey="transaksi" fill="#22c55e" radius={[6, 6, 0, 0]} />
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(val: number) => [`Rp ${val.toLocaleString("id-ID")}`, "Pendapatan"]}
+                      formatter={(val: any) => [`Rp ${Number(val || 0).toLocaleString("id-ID")}`, "Pendapatan"]}
                       contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px" }}
                     />
                     <Legend formatter={(val) => <span className="text-base font-semibold text-slate-600">{val}</span>} />
