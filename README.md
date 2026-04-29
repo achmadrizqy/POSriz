@@ -166,7 +166,7 @@ Buka [http://localhost:3000](http://localhost:3000)
 | `DATABASE_URL` | PostgreSQL connection string (dari Neon) |
 | `NEXTAUTH_SECRET` | Random string untuk enkripsi JWT |
 | `NEXTAUTH_URL` | URL aplikasi (http://localhost:3000 atau URL Vercel) |
-| `KASIR_USERNAME` | Username untuk role kasir |
-| `KASIR_PASSWORD` | Password untuk role kasir |
-| `ADMIN_USERNAME` | Username untuk role admin |
-| `ADMIN_PASSWORD` | Password untuk role admin |
+| `KASIR_USERNAME` | kasir |
+| `KASIR_PASSWORD` | kasir123 |
+| `ADMIN_USERNAME` | admin |
+| `ADMIN_PASSWORD` | admin123 |
