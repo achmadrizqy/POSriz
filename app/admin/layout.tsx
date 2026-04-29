@@ -1,6 +1,5 @@
 import Link from "next/link";
 import StokBadge from "../components/StokBadge";
-import StokBadgeBar from "../components/StokBadgeBar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -37,9 +36,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-slate-700/60 space-y-3">
-          {/* Alert stok menipis — selalu terlihat di semua halaman */}
-          <StokBadgeBar />
-
           <div className="px-2">
             <p className="text-xs text-slate-500">Login sebagai</p>
             <p className="text-sm font-bold text-slate-300 capitalize">{(session.user as any).username}</p>
