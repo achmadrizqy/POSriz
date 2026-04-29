@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         <nav className="flex-1 px-3 py-5 space-y-1">
+          <NavItem href="/admin/dashboard" emoji="📈" label="Dashboard" />
           <NavItem href="/admin/master-data" emoji="📦" label="Data Produk" />
           <NavItem href="/admin/stok-kritis" emoji="🔔" label="Stok Kritis" badge={<StokBadge />} />
           <NavItem href="/admin/laporan" emoji="📊" label="Laporan" />
